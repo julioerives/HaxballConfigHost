@@ -26,6 +26,7 @@ host.onPlayerJoin = function(player) {
     const players=host.getPlayerList();
     const teamRed = players.filter(p => p.team === 1);
     const teamBlue = players.filter(p => p.team === 2);
+    if(teamRed.length >= 3 || teamBlue.length >= 3)return
     if(players.length % 2 == 0){
         host.setPlayerTeam(players[players.length-2].id,1)
         host.setPlayerTeam(players[players.length-1].id,2)
@@ -58,6 +59,46 @@ host.onPlayerLeave=function(player){
     }
 
 }
+host.onTeamVictory = function(scores) {
+    let players = host.getPlayerList();
+    console.log("🚀 ~ players:", players);
+    
+    host.stopGame();
+
+    if (scores.red > scores.blue) {
+        players.forEach(element => {
+            if (element.team === 2) {
+                host.setPlayerTeam(element.id, 0); 
+            }
+        });
+        
+        setTimeout(() => {
+            let noTeam = host.getPlayerList().filter(element => element.team === 0);
+            let teamRed = host.getPlayerList().filter(element => element.team === 1);
+            noTeam.slice(0, teamRed.length).forEach(element => {
+                host.setPlayerTeam(element.id, 2);
+            });
+            host.startGame()
+        }, 1000);
+        
+        return
+    }
+        players.forEach(element => {
+            if (element.team === 1) {
+                host.setPlayerTeam(element.id, 0);
+            }
+        });
+        
+        setTimeout(() => {
+            let noTeam = host.getPlayerList().filter(element => element.team === 0);
+            let teamBlue = host.getPlayerList().filter(element => element.team === 2);
+            noTeam.slice(0, teamBlue.length).forEach(element => {
+                host.setPlayerTeam(element.id, 1);
+            });
+            host.startGame()
+        }, 1000);
+        
+};
 host.onTeamGoal= function(team) {
     if(!lastTouchPlayer) return;
     if(team == lastTouchPlayer.team){
