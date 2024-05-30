@@ -16,12 +16,13 @@ host.setScoreLimit(3);
 host.setTimeLimit(3);
 host.setTeamsLock(false);
 host.onPlayerBallKick = function(player) {
-    lastlastTouchPlayer = lastTouchPlayer
+    lastlastTouchPlayer = lastTouchPlayer==player? lastlastTouchPlayer:lastTouchPlayer;
     lastTouchPlayer = player;
 
 };
 host.onPlayerJoin = function(player) {
     host.sendAnnouncement(`Se ha unido ${player.name}`,null,messagesShow.normal,"italic",2)
+    console.log(player);
     validarNewUser(player);
     const players=host.getPlayerList();
     const teamRed = players.filter(p => p.team === 1);
@@ -31,7 +32,6 @@ host.onPlayerJoin = function(player) {
         host.setPlayerTeam(players[players.length-2].id,1)
         host.setPlayerTeam(players[players.length-1].id,2)
     }
-    console.log(player)
 }
 host.onPlayerLeave=function(player){
     const players=host.getPlayerList();
@@ -61,7 +61,6 @@ host.onPlayerLeave=function(player){
 }
 host.onTeamVictory = function(scores) {
     let players = host.getPlayerList();
-    console.log("🚀 ~ players:", players);
     
     host.stopGame();
 
@@ -104,8 +103,18 @@ host.onTeamGoal= function(team) {
     if(team == lastTouchPlayer.team){
         host.sendAnnouncement(`Gol de ${lastTouchPlayer.name}`)
         statsAllUsers[lastTouchPlayer.id].goles++;
+        host.setPlayerAvatar(lastTouchPlayer.id,"⚽")
+        setTimeout(()=>{
+            host.setPlayerAvatar(lastTouchPlayer.id,null)
+        },1500)
         console.log(lastlastTouchPlayer)
-        if(lastlastTouchPlayer && (lastTouchPlayer.id != lastlastTouchPlayer.id)) statsAllUsers[lastlastTouchPlayer.id].asistencias++;
+        if(lastlastTouchPlayer && (lastTouchPlayer.id != lastlastTouchPlayer.id)){
+            statsAllUsers[lastlastTouchPlayer.id].asistencias++;
+            host.setPlayerAvatar(lastlastTouchPlayer.id,"🎯")
+            setTimeout(()=>{
+                host.setPlayerAvatar(lastlastTouchPlayer.id,null)
+            },1500)
+        } 
         return
     }
     host.sendAnnouncement(`Gol en propia puerta de ${lastTouchPlayer.name}`)
@@ -113,6 +122,7 @@ host.onTeamGoal= function(team) {
     console.log(lastTouchPlayer);
 }
 host.onPlayerChat= function(player,message) {
+    console.log(player)
     const messages = message.split(" ");
     if(!message.startsWith("!")) return true
     if(messages[0] =="!showStats"){
@@ -121,7 +131,7 @@ host.onPlayerChat= function(player,message) {
         return false
     }
     if(messages[0]=="!admin"){
-        if(!messages[1]=="CruzAzul"){
+        if(messages[1]!="CruzAzul"){
             host.sendAnnouncement("Contrasenia no valida",player.id);
             return false;
         }
