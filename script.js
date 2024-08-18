@@ -7,8 +7,11 @@ const host = HBInit({
 });
 const messagesShow ={
     normal:0x00FFFB,
-    toUser:0x890002
+    toUser:0x890002,
+    danger:0xFF0408
 }
+let allUsers ={};
+
 let lastlastTouchPlayer=null;
 let lastTouchPlayer=null;
 host.setDefaultStadium("Big");
@@ -16,15 +19,33 @@ host.setScoreLimit(3);
 host.setTimeLimit(3);
 host.setTeamsLock(false);
 host.onPlayerBallKick = function(player) {
+    console.log("🚀 ~ player:", player)
     lastlastTouchPlayer = lastTouchPlayer==player? lastlastTouchPlayer:lastTouchPlayer;
     lastTouchPlayer = player;
 
 };
 host.onPlayerJoin = function(player) {
+    // let userExists;
     host.sendAnnouncement(`Se ha unido ${player.name}`,null,messagesShow.normal,"italic",2)
     console.log(player);
+    // userExists = allUsers.filter(element => element.name == player.name);
+    // console.log(userExists)
+    // if(userExists.length >0){
+    //     host.sendAnnouncement("Este usuario ya existe...",player.id,messagesShow.danger,"",2);
+    //     host.sendAnnouncement("Este usuario ya existe...",player.id,messagesShow.danger,"",2);
+    //     host.sendAnnouncement("Este usuario ya existe...",player.id,messagesShow.danger,"",2);
+    //     host.sendAnnouncement("Este usuario ya existe...",player.id,messagesShow.danger,"",2);
+    //     host.sendAnnouncement("Este usuario ya existe...",player.id,messagesShow.danger,"",2);
+    //     host.sendAnnouncement("Este usuario ya existe...",player.id,messagesShow.danger,"",2);
+    //     setTimeout(()=>{
+    //         host.kickPlayer(player.id)
+    //     },1000)
+    // }
+
+    changeIdPlayer(player);
     validarNewUser(player);
     const players=host.getPlayerList();
+    console.log("🚀 ~ host.getPlayerList():", host.getPlayerList())
     const teamRed = players.filter(p => p.team === 1);
     const teamBlue = players.filter(p => p.team === 2);
     if(teamRed.length >= 3 || teamBlue.length >= 3)return
@@ -35,10 +56,12 @@ host.onPlayerJoin = function(player) {
 }
 host.onPlayerLeave=function(player){
     const players=host.getPlayerList();
+    console.log("Player leave",player)
+    playerLeave(getAuthPlayer(player));
+
     const teamRed = players.filter(p => p.team === 1);
     const teamBlue = players.filter(p => p.team === 2);
     const noTeam = players.filter(p => p.team===0);
-    console.log("Player leave",player)
     if(player.team == 1 || player.team == 2){
         console.log()
         if (teamRed.length <= teamBlue.length) {
@@ -102,14 +125,15 @@ host.onTeamGoal= function(team) {
     if(!lastTouchPlayer) return;
     if(team == lastTouchPlayer.team){
         host.sendAnnouncement(`Gol de ${lastTouchPlayer.name}`)
-        statsAllUsers[lastTouchPlayer.id].goles++;
+        
+        statsAllUsers[getAuthPlayer(lastTouchPlayer)].goles++;
         host.setPlayerAvatar(lastTouchPlayer.id,"⚽")
         setTimeout(()=>{
             host.setPlayerAvatar(lastTouchPlayer.id,null)
         },1500)
         console.log(lastlastTouchPlayer)
         if(lastlastTouchPlayer && (lastTouchPlayer.id != lastlastTouchPlayer.id)){
-            statsAllUsers[lastlastTouchPlayer.id].asistencias++;
+            statsAllUsers[getAuthPlayer(lastlastTouchPlayer.id)].asistencias++;
             host.setPlayerAvatar(lastlastTouchPlayer.id,"🎯")
             setTimeout(()=>{
                 host.setPlayerAvatar(lastlastTouchPlayer.id,null)
@@ -118,7 +142,11 @@ host.onTeamGoal= function(team) {
         return
     }
     host.sendAnnouncement(`Gol en propia puerta de ${lastTouchPlayer.name}`)
-    statsAllUsers[lastTouchPlayer.id].golesContra++;
+    statsAllUsers[getAuthPlayer(lastTouchPlayer.id)].golesContra++;
+    host.setPlayerAvatar(lastTouchPlayer.id,"💩")
+    setTimeout(()=>{
+        host.setPlayerAvatar(lastTouchPlayer.id);
+    })
     console.log(lastTouchPlayer);
 }
 host.onPlayerChat= function(player,message) {
@@ -145,10 +173,54 @@ host.onPlayerChat= function(player,message) {
     }
 }
 const validarNewUser=(player)=>{
-    if(statsAllUsers[player.id]) return;
-    statsAllUsers[player.id] = {
+    if(statsAllUsers[player.auth]) return;
+    statsAllUsers[player.auth] = {
         goles:0,
         asistencias:0,
         golesContra:0
     }
+}
+const changeIdPlayer= (player)=>{
+    if(!allUsers[player.auth]){
+        allUsers[player.auth] ={
+            auth:player.auth,
+            id: player.id,
+            active: true
+        }
+        return null;
+    };
+
+    console.log("🚀 ~ changeIdPlayer ~ allUsers[player.auth]:", allUsers[player.auth])
+
+    
+    if(allUsers[player.auth].active){
+        host.kickPlayer(player.id,"No entres 2 veces a la sala, romperas la sala pendejo")
+    }
+    allUsers[player.auth] = {
+        ...allUsers[player.auth],
+        id:player.id,
+        active:true
+    };
+    return allUsers[player.auth].auth
+}
+const getAuthPlayer= (player)=>{
+    const dataUser = Object.values(allUsers).map(user => {
+        if(user.id = player.id){
+            return user
+        }
+        return null;
+    });
+    console.log("🚀 ~ getAuthPlayer ~ dataUse:", dataUser)
+    return dataUser[0].auth || null;
+}
+const playerLeave= (auth) => {
+    console.log("primer auth",auth)
+    console.log(allUsers[auth])
+    if(!allUsers[auth]){
+        return;
+    } 
+    console.log("🚀 ~ playerLeave ~ auth:", auth)
+
+    allUsers[auth].active = false;
+
 }
